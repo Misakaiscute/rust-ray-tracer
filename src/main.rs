@@ -28,7 +28,7 @@ fn main() -> std::io::Result<()> {
             f32::INFINITY,
             Orientation::new(0, 0, 0),
             Surface {
-                color: Color::new(220, 220, 220).unwrap(),
+                color: Color::new(255, 255, 255).unwrap(),
                 mat: Material::new(0.3, 10f32).unwrap()
             }
         )),
@@ -37,12 +37,12 @@ fn main() -> std::io::Result<()> {
             origin: Point3 { x: 8f32, y: 3f32, z: 5f32 },
             surface: Surface {
                 color: Color::new(255, 0, 0).unwrap(),
-                mat: Material::new(0.8, 20f32).unwrap()
+                mat: Material::new(0.05, 20f32).unwrap()
             }
         }),
         Box::new(Sphere {
             r: 4f32,
-            origin: Point3 { x: 12f32, y: 4f32, z: -5f32 },
+            origin: Point3 { x: 12f32, y: 4f32, z: -10f32 },
             surface: Surface {
                 color: Color::new(34, 133, 161).unwrap(),
                 mat: Material::new(0.3, 100f32).unwrap()
@@ -58,7 +58,7 @@ fn main() -> std::io::Result<()> {
         },
         camera: camera,
         objects: objects,
-        backdrop: Color::new(0, 0, 0).unwrap()
+        backdrop: Color::new(98, 158, 227).unwrap()
     };
 
     let mut result_matrix =vec![

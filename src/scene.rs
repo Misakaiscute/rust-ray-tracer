@@ -8,72 +8,61 @@ pub struct Scene {
 }
 
 impl Scene {
+    const MAX_BOUNCES: u8 = 5;
+    const EPSILON: f32 = 0.001;
     pub fn begin_trace(&self, result_matrix: &mut Vec<Vec<Color>>) -> () {
         for y in (0..(self.camera.res_h as usize)).rev() {
             for x in 0..self.camera.res_w as usize {
                 let ray_v: Vec3 = self.camera.px_to_ray(x as u16, y as u16);
                 let px_color: Color = self.trace_ray(
-                    Color::new(0, 0, 0).unwrap(),
-                    self.light_source.color,
-                    1f32,
                     &self.camera.pov,
                     ray_v,
-                    5,
-                    5
+                    self.light_source.color,
+                    Color::new(0, 0, 0).unwrap(),
+                    None, None
                 );
                 result_matrix[y][x] = px_color;
             }
         }
-        /*let ray_v: Vec3 = self.camera.px_to_ray(776, 951);
-        let px_color: Color = self.trace_ray(
-            Color::new(0, 0, 0).unwrap(),
-            self.light_source.color,
-            1f32,
-            &self.camera.pov,
-            ray_v,
-            5
-        );
-        result_matrix[776][951] = px_color;*/
     }
 
     fn trace_ray(
         &self,
-        mut deduced_color: Color,
-        light_color: Color,
-        retained_spec: f32,
         ray_source: &Point3,
         ray_v: Vec3,
-        max_bounces: u8,
-        bounces_left: u8
+        light_color: Color,
+        mut deduced_color: Color,
+        retained_spec: Option<f32>,
+        bounces_left: Option<u8>
     ) -> Color {
+        //Determine the object index we hit
         let obj_hit: Option<(usize, f32)> = self.calc_obj_hit(ray_source, &ray_v);
-        if obj_hit == None || bounces_left == 0 {
-            if bounces_left == max_bounces {
-                return self.backdrop;
-            } else {
-                return deduced_color;
-            }
+        //Base cases
+        if obj_hit == None {
+            return deduced_color + self.backdrop.scale_by(retained_spec.unwrap_or(1f32));
+        } else if bounces_left.unwrap_or(Self::MAX_BOUNCES) == 0 {
+            return deduced_color;
         }
-
+        //Calculate next bounce ray_v and source
         let (obj_idx, dist_to_obj) = obj_hit.unwrap();
         let point_hit: Point3 = ray_source.apply_vector(&ray_v.scale_by(dist_to_obj));
         let n_v: Vec3 = self.objects[obj_idx].normal_v(&point_hit).to_unit();
         let l_v: Vec3 = point_hit.derive_vector(&self.light_source.cords).to_unit();
-
-        let current_color: Color = self.shade(&point_hit, obj_idx, &ray_v, &n_v, &l_v, retained_spec, light_color);
-        deduced_color = deduced_color + current_color;
-
         let incident: f32 = n_v.dot(&ray_v);
         let r_v: Vec3 = ray_v - n_v.scale_by(2f32 * incident);
         
+        //Update color on pixel
+        let current_color: Color = self.shade(&point_hit, obj_idx, &ray_v, &n_v, &l_v, retained_spec.unwrap_or(1f32), light_color);
+        deduced_color = deduced_color + current_color;
+
+        //Recoursion
         return self.trace_ray(
-            deduced_color,
-            current_color.take_least(light_color),
-            self.objects[obj_idx].surface().mat.specular_refl() * retained_spec,
-            &point_hit.apply_vector(&r_v.scale_by(0.001)),
+            &point_hit.apply_vector(&r_v.scale_by(Self::EPSILON)),
             r_v,
-            max_bounces,
-            bounces_left - 1,
+            current_color.take_least(light_color),
+            deduced_color,
+            Some(self.objects[obj_idx].surface().mat.specular_refl() * retained_spec.unwrap_or(1f32)),
+            Some(bounces_left.unwrap_or(Self::MAX_BOUNCES) - 1),
         )
     }
 
@@ -101,7 +90,7 @@ impl Scene {
     }
 
     fn calc_shadow_attenuation(&self, for_point: &Point3, l_v: &Vec3, for_obj_idx: usize) -> Color {
-        let epsilon_adjusted_point: Point3 = for_point.apply_vector(&l_v.scale_by(0.001));
+        let epsilon_adjusted_point: Point3 = for_point.apply_vector(&l_v.scale_by(Self::EPSILON));
         let result: Option<(usize, f32)> = self.calc_obj_hit(&epsilon_adjusted_point, l_v);
         if result == None {
             return self.light_source.color;
