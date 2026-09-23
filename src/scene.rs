@@ -1,15 +1,28 @@
-use crate::{Camera, Color, Point3, Vec3, geometry::GeometryHolder};
+use crate::{Camera, Color, Point3, Vec3, geometry::GeometryHolder, scene::light::LightSource};
 
 pub struct Scene {
-    pub light_source: light::LightSource,
+    light_source: light::LightSource,
     pub camera: Camera,
-    pub objects: Vec<Box<dyn GeometryHolder>>,
-    pub backdrop: Color
+    objects: Vec<Box<dyn GeometryHolder>>,
+    backdrop: Color
 }
 
 impl Scene {
     const MAX_BOUNCES: u8 = 5;
     const EPSILON: f32 = 0.001;
+    pub fn new(
+        light_src: LightSource,
+        cam: Camera,
+        objs: Vec<Box<dyn GeometryHolder>>,
+        backdrop: Color
+    ) -> Result<Scene, String> {
+        return Ok(Scene{
+            light_source: light_src,
+            camera: cam,
+            objects: objs,
+            backdrop: backdrop
+        });
+    }
     pub fn begin_trace(&self, result_matrix: &mut Vec<Vec<Color>>) -> () {
         for y in (0..(self.camera.res_h as usize)).rev() {
             for x in 0..self.camera.res_w as usize {

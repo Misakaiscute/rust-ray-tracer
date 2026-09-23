@@ -9,7 +9,7 @@ pub use geometry::vec3::Vec3;
 pub use surface::material::Material;
 pub use surface::color::Color;
 
-use crate::{geometry::{GeometryHolder, objects::{Plane, Sphere}, orientation::Orientation}, image::ppm_writer::PPMWriter, surface::Surface};
+use crate::{geometry::{GeometryHolder, objects::{Plane, Sphere}, orientation::Orientation}, image::ppm_writer::PPMWriter, scene::{Scene, light::LightSource}, surface::Surface};
 
 fn main() -> std::io::Result<()> {
     let camera: Camera = Camera::new(
@@ -50,18 +50,18 @@ fn main() -> std::io::Result<()> {
         })
     ];
 
-    let scene: scene::Scene = scene::Scene {
-        light_source: scene::light::LightSource {
+    let scene: Scene = Scene::new(
+        LightSource {
             cords: Point3 { x: -10f32, y: 20f32, z: 10f32 },
             color: Color::new(255, 255, 255).unwrap(),
             amb_light: 0.1
         },
-        camera: camera,
-        objects: objects,
-        backdrop: Color::new(98, 158, 227).unwrap()
-    };
+        camera,
+        objects,
+        Color::new(98, 158, 227).unwrap()
+    ).unwrap();
 
-    let mut result_matrix =vec![
+    let mut result_matrix = vec![
         vec![Color::new(0, 0, 0).unwrap(); scene.camera.res_w as usize];
         scene.camera.res_h as usize
     ];
