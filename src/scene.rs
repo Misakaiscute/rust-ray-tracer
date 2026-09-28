@@ -1,10 +1,11 @@
-use crate::{Camera, Color, Point3, Vec3, geometry::GeometryHolder, scene::light::LightSource};
+use crate::{Camera, Color, Point3, Vec3, anti_aliasing::AntiAliasing, geometry::GeometryHolder, image::ColorMatrix, scene::light::LightSource};
 
 pub struct Scene {
     light_source: light::LightSource,
     pub camera: Camera,
     objects: Vec<Box<dyn GeometryHolder>>,
-    backdrop: Color
+    backdrop: Color,
+    anti_aliasing: AntiAliasing
 }
 
 impl Scene {
@@ -14,18 +15,27 @@ impl Scene {
         light_src: LightSource,
         cam: Camera,
         objs: Vec<Box<dyn GeometryHolder>>,
-        backdrop: Color
+        backdrop: Color,
+        anti_aliasing: AntiAliasing
     ) -> Result<Scene, String> {
         return Ok(Scene{
             light_source: light_src,
             camera: cam,
             objects: objs,
-            backdrop: backdrop
+            backdrop: backdrop,
+            anti_aliasing: anti_aliasing
         });
     }
-    pub fn begin_trace(&self, result_matrix: &mut Vec<Vec<Color>>) -> () {
-        for y in (0..(self.camera.res_h as usize)).rev() {
-            for x in 0..self.camera.res_w as usize {
+
+    pub fn render(&mut self) -> ColorMatrix {
+        let (render_w, render_h): (u16, u16) = self.anti_aliasing.render_size(self.camera.width, self.camera.height);
+        self.camera.set_dimensions(render_w, render_h);
+        let mut render_res: ColorMatrix = vec![
+            vec![Color::BLACK; render_w as usize]; render_h as usize
+        ];
+
+        for y in 0..render_h {
+            for x in 0..render_w {
                 let ray_v: Vec3 = self.camera.px_to_ray(x as u16, y as u16);
                 let px_color: Color = self.trace_ray(
                     &self.camera.pov,
@@ -34,9 +44,11 @@ impl Scene {
                     Color::new(0, 0, 0).unwrap(),
                     None, None
                 );
-                result_matrix[y][x] = px_color;
+                render_res[y as usize][x as usize] = px_color;
             }
         }
+        let result: ColorMatrix = self.anti_aliasing.apply(render_res); 
+        result
     }
 
     fn trace_ray(

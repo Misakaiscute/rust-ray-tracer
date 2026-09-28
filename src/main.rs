@@ -2,6 +2,7 @@ mod scene;
 mod surface;
 mod geometry;
 mod image;
+mod anti_aliasing;
 
 pub use geometry::point3::Point3;
 pub use scene::camera::Camera;
@@ -9,7 +10,7 @@ pub use geometry::vec3::Vec3;
 pub use surface::material::Material;
 pub use surface::color::Color;
 
-use crate::{geometry::{GeometryHolder, objects::{Plane, Sphere}, orientation::Orientation}, image::ppm_writer::PPMWriter, scene::{Scene, light::LightSource}, surface::Surface};
+use crate::{anti_aliasing::AntiAliasing, geometry::{GeometryHolder, objects::{Plane, Sphere}, orientation::Orientation}, image::{ColorMatrix, ppm_writer::PPMWriter}, scene::{Scene, light::LightSource}, surface::Surface};
 
 fn main() -> std::io::Result<()> {
     let camera: Camera = Camera::new(
@@ -50,24 +51,20 @@ fn main() -> std::io::Result<()> {
         })
     ];
 
-    let scene: Scene = Scene::new(
+    let mut scene: Scene = Scene::new(
         LightSource {
             cords: Point3 { x: -10f32, y: 20f32, z: 10f32 },
-            color: Color::new(255, 255, 255).unwrap(),
+            color: Color::WHITE,
             amb_light: 0.1
         },
         camera,
         objects,
-        Color::new(98, 158, 227).unwrap()
+        Color::new(98, 158, 227).unwrap(),
+        AntiAliasing::SSAA(4)
     ).unwrap();
 
-    let mut result_matrix = vec![
-        vec![Color::new(0, 0, 0).unwrap(); scene.camera.res_w as usize];
-        scene.camera.res_h as usize
-    ];
-    scene.begin_trace(&mut result_matrix);
-
-    PPMWriter::write(result_matrix)?;
+    let image: ColorMatrix = scene.render();
+    PPMWriter::write(image, "anti_aliasing_4x")?;
 
     Ok(())
 }
