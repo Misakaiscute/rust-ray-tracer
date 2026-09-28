@@ -2,40 +2,56 @@ use std::ops::{Add, Sub, Mul};
 
 #[derive(Clone, Copy)]
 pub struct Color {
-    r: f32,
-    g: f32,
-    b: f32,
+    r: i16,
+    g: i16,
+    b: i16,
 }
 
 impl Color {
-    pub fn new(r: u16, g: u16, b: u16) -> Result<Self, String> {
+    pub const BLACK: Self = Self {r: 0, g: 0, b: 0};
+    pub const WHITE: Self = Self {r: 255, g: 255, b: 255};
+
+    pub const COLOR_SPACE_MAX: i16 = 255;
+    pub const COLOR_SPACE_MIN: i16 = 0;
+
+    pub fn new(r: i16, g: i16, b: i16) -> Result<Self, String> {
         let rgb_specs_valid: Option<String> = Color::validate_rgb_space(r, g, b);
 
-        let r_n: f32 = f32::from(r) / 255f32;
-        let g_n: f32 = f32::from(g) / 255f32;
-        let b_n: f32 = f32::from(b) / 255f32;
-
         if rgb_specs_valid == None {
-            return Ok(Color { r: r_n, g: g_n, b: b_n });
+            return Ok(Color { r: r, g: g, b: b });
         } 
 
         return Err(rgb_specs_valid.unwrap());
     }
 
+    pub fn red(&self) -> i16 {
+        self.r
+    }
+    pub fn green(&self) -> i16 {
+        self.g
+    }
+    pub fn blue(&self) -> i16 {
+        self.b
+    }
+
     pub fn scale_by(&self, s: f32) -> Self {
-        let r: f32 = self.r * s;
-        let g: f32 = self.g * s;
-        let b: f32 = self.b * s;
-        let mut result: Color = Color { r, g, b };
+        let r: f32 = f32::from(self.r) * s;
+        let g: f32 = f32::from(self.g) * s;
+        let b: f32 = f32::from(self.b) * s;
+        let mut result: Color = Color {
+            r: r.round() as i16,
+            g: g.round() as i16,
+            b: b.round() as i16
+        };
         result.normalize();
 
         result
     }
 
     pub fn take_least(&self, other: Self) -> Self {
-        let mut r: f32 = self.r;
-        let mut g: f32 = self.g;
-        let mut b: f32 = self.b;
+        let mut r: i16 = self.r;
+        let mut g: i16 = self.g;
+        let mut b: i16 = self.b;
 
         if other.r < self.r {
             r = other.r;
@@ -50,35 +66,35 @@ impl Color {
     }
 
     pub fn as_rgb(&self) -> String {
-        String::from(format!("{} {} {}", (self.r * 255f32) as u8, (self.g * 255f32) as u8, (self.b * 255f32) as u8))
+        String::from(format!("{} {} {}", self.r, self.g, self.b))
     }
 
     fn normalize(&mut self) {
-        if self.r > 1f32 {
-            self.r = 1f32
-        } else if self.r < -1f32 {
-            self.r = -1f32
-        }
-    
-        if self.g > 1f32 {
-            self.g = 1f32
-        } else if self.g < -1f32 {
-            self.g = -1f32
+        if self.r > Self::COLOR_SPACE_MAX {
+            self.r = Self::COLOR_SPACE_MAX
+        } else if self.r <= Self::COLOR_SPACE_MIN {
+            self.r = Self::COLOR_SPACE_MIN 
         }
 
-        if self.b > 1f32 {
-            self.b = 1f32
-        } else if self.b < -1f32 {
-            self.b = -1f32
+        if self.g > Self::COLOR_SPACE_MAX {
+            self.g = Self::COLOR_SPACE_MAX
+        } else if self.g <= Self::COLOR_SPACE_MIN {
+            self.g = Self::COLOR_SPACE_MIN 
+        }
+
+        if self.b > Self::COLOR_SPACE_MAX {
+            self.b = Self::COLOR_SPACE_MAX
+        } else if self.b <= Self::COLOR_SPACE_MIN {
+            self.b = Self::COLOR_SPACE_MIN 
         }
     }
 
-    fn validate_rgb_space(r: u16, g: u16, b: u16) -> Option<String>  {
-        if !(0..=255).contains(&r) {
+    fn validate_rgb_space(r: i16, g: i16, b: i16) -> Option<String>  {
+        if !(0..=Self::COLOR_SPACE_MAX).contains(&r) {
             return Some(format!("Red component must be >= 0 and < 256, got {}", r));
-        } else if !(0..=255).contains(&g) {
+        } else if !(0..=Self::COLOR_SPACE_MAX).contains(&g) {
             return Some(format!("Green component must be >= 0 and < 256, got {}", g));
-        } else if !(0..=255).contains(&b) {
+        } else if !(0..=Self::COLOR_SPACE_MAX).contains(&b) {
             return Some(format!("Blue component must be >= 0 and < 256, got {}", r));
         } 
 
@@ -90,9 +106,9 @@ impl Add for Color {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self {
-        let r: f32 = self.r + rhs.r;
-        let g: f32 = self.g + rhs.g;
-        let b: f32 = self.b + rhs.b;
+        let r: i16 = self.r + rhs.r;
+        let g: i16 = self.g + rhs.g;
+        let b: i16 = self.b + rhs.b;
         let mut result: Color = Color { r, g, b };
         result.normalize();
 
@@ -104,9 +120,9 @@ impl Sub for Color {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self {
-        let r: f32 = self.r - rhs.r;
-        let g: f32 = self.g - rhs.g;
-        let b: f32 = self.b - rhs.b;
+        let r: i16 = self.r - rhs.r;
+        let g: i16 = self.g - rhs.g;
+        let b: i16 = self.b - rhs.b;
         let mut result: Color = Color { r, g, b };
         result.normalize();
 
@@ -118,10 +134,25 @@ impl Mul for Color {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
-        let r: f32 = self.r * rhs.r;
-        let g: f32 = self.g * rhs.g;
-        let b: f32 = self.b * rhs.b;
-        let mut result: Color = Color { r, g, b };
+        let mut r: i32 = (self.r as i32 * rhs.r as i32) / Self::COLOR_SPACE_MAX as i32;
+        if r > i16::MAX as i32 {
+            r = i16::MAX as i32
+        }
+
+        let mut g: i32 = (self.g as i32 * rhs.g as i32) / Self::COLOR_SPACE_MAX as i32;
+        if g > i16::MAX as i32 {
+            g = i16::MAX as i32
+        }
+
+        let mut b: i32 = (self.b as i32 * rhs.b as i32) / Self::COLOR_SPACE_MAX as i32;
+        if b > i16::MAX as i32 {
+            b = i16::MAX as i32
+        }
+        let mut result: Color = Color {
+            r: r as i16,
+            g: g as i16,
+            b: b as i16
+        };
         result.normalize();
 
         result
